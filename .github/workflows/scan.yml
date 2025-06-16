@@ -9,22 +9,18 @@ jobs:
   dast-zap:
     runs-on: ubuntu-latest
 
-    services:
-      web:
-        name: myapp
-        build:
-          context: ./frontend
-        ports:
-          - 3000:3000
-        options: >-
-          --health-cmd "curl -f http://localhost:3000 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Build Docker image (frontend)
+        run: |
+          docker build -t myapp ./frontend
+
+      - name: Run Docker container in background
+        run: |
+          docker run -d -p 3000:3000 --name my-running-app myapp
+          sleep 10  # give it a few seconds to boot
 
       - name: Run OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.10.0
