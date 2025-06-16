@@ -27,3 +27,4 @@ jobs:
         with:
           target: 'http://localhost:3000'
           fail_action: false
+          github_token: ''
