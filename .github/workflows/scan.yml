@@ -1,45 +1,53 @@
-name: ZAP Scan
+name: ZAP Baseline Scan
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  zap-scan:
+  zap_scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies and build frontend
+        run: |
+          npm install
+          npm run build
+          npm install -g serve
 
       - name: Start frontend app in background
         run: |
-          nohup npx serve -s build -l 3000 &
+          nohup serve -s build -l 3000 &
 
-      - name: Wait for app to be available
+      - name: Wait for app to be ready
         run: |
           sleep 10
-          curl --retry 10 --retry-connrefused http://localhost:3000 || exit 1
+          until curl -s http://localhost:3000 | grep "<html"; do
+            echo "Waiting for app to start..."
+            sleep 3
+          done
 
       - name: Run ZAP Baseline Scan
         run: |
-          docker pull ghcr.io/zaproxy/zaproxy:stable
           docker run \
             -v ${{ github.workspace }}:/zap/wrk/:rw \
             --network=host \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t http://localhost:3000 \
-            -J /zap/wrk/report_json.json \
-            -w /zap/wrk/report_md.md \
-            -r /zap/wrk/report_html.html
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html
 
-      - name: List files after ZAP scan
-        run: ls -al ${{ github.workspace }}
-
-      - name: Upload ZAP Reports
+      - name: Upload ZAP reports
         uses: actions/upload-artifact@v4
         with:
           name: zapscan_${{ github.run_id }}
@@ -47,4 +55,4 @@ jobs:
             report_json.json
             report_md.md
             report_html.html
-          if-no-files-found: warn
+          if-no-files-found: error
