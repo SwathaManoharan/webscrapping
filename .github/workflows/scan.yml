@@ -1,31 +1,50 @@
-name: DAST Scan with OWASP ZAP
+name: ZAP Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  dast-zap:
+  zap-scan:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Build Docker image (frontend)
+      - name: Start frontend app in background
         run: |
-          docker build -t myapp ./frontend
+          nohup npx serve -s build -l 3000 &
 
-      - name: Run Docker container in background
+      - name: Wait for app to be available
         run: |
-          docker run -d -p 3000:3000 --name my-running-app myapp
-          sleep 10  # give it a few seconds to boot
+          sleep 10
+          curl --retry 10 --retry-connrefused http://localhost:3000 || exit 1
 
-      - name: Upload ZAP report
+      - name: Run ZAP Baseline Scan
+        run: |
+          docker pull ghcr.io/zaproxy/zaproxy:stable
+          docker run \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            --network=host \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:3000 \
+            -J /zap/wrk/report_json.json \
+            -w /zap/wrk/report_md.md \
+            -r /zap/wrk/report_html.html
+
+      - name: List files after ZAP scan
+        run: ls -al ${{ github.workspace }}
+
+      - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         with:
           name: zapscan_${{ github.run_id }}
           path: |
-            report_html.html
             report_json.json
+            report_md.md
+            report_html.html
+          if-no-files-found: warn
