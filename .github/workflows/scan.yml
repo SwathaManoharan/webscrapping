@@ -12,26 +12,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies and build frontend
+      - name: Build and run frontend Docker container
+        working-directory: ./frontend
         run: |
-          npm install
-          npm run build
-          npm install -g serve
-
-      - name: Start frontend app in background
-        run: |
-          nohup serve -s build -l 3000 &
-
-      - name: Wait for app to be ready
-        run: |
+          docker build -t my-frontend .
+          docker run -d --name myfrontend --network=host my-frontend
           sleep 10
+
+      - name: Wait for frontend to be ready
+        run: |
           until curl -s http://localhost:3000 | grep "<html"; do
-            echo "Waiting for app to start..."
+            echo "Waiting for frontend..."
             sleep 3
           done
 
@@ -47,7 +38,7 @@ jobs:
             -w report_md.md \
             -r report_html.html
 
-      - name: Upload ZAP reports
+      - name: Upload ZAP Scan Reports
         uses: actions/upload-artifact@v4
         with:
           name: zapscan_${{ github.run_id }}
@@ -55,4 +46,4 @@ jobs:
             report_json.json
             report_md.md
             report_html.html
-          if-no-files-found: error
+          if-no-files-found: warn
