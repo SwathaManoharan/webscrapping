@@ -1,0 +1,15 @@
+rules:
+  - id: 10020
+    threshold: WARN
+  - id: 10021
+    threshold: WARN
+  - id: 10027
+    threshold: WARN
+  - id: 10038
+    threshold: WARN
+  - id: 10049
+    threshold: WARN
+  - id: 10063
+    threshold: WARN
+  - id: 90004
+    threshold: WARN
