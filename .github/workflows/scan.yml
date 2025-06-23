@@ -34,16 +34,16 @@ jobs:
       - name: Run ZAP Baseline Scan
         run: |
           docker run \
-            --network=host \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-            -t http://localhost:8000 \
-            -c zap-config.yaml \
-            -J report_json.json \
-            -w report_md.md \
-            -r report_html.html
-
+          --network=host \
+          -v ${{ github.workspace }}:/zap/wrk/:rw \
+          ghcr.io/zaproxy/zaproxy:stable \
+          zap-baseline.py \
+          -t http://localhost:8000 \
+          -c zap-config.conf \
+          -J report_json.json \
+          -w report_md.md \
+          -r report_html.html
+          
       - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         with:
