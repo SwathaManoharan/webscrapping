@@ -12,33 +12,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build and run frontend Docker container
-        working-directory: ./frontend
-        run: |
-          docker build -t my-frontend .
-          docker run -d --name myfrontend --network=host my-frontend
-          sleep 10
+      - name: Set up Docker Compose
+        run: docker-compose up -d --build
 
-      - name: Wait for frontend to be ready
+      - name: Wait for backend to be ready
         run: |
-          until curl -s http://localhost:3000 | grep "<html"; do
-            echo "Waiting for frontend..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000 | grep -q "<html"; then
+              echo "Backend ready!"
+              break
+            fi
+            echo "Waiting for backend..."
             sleep 3
           done
 
       - name: Run ZAP Baseline Scan
         run: |
           docker run \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
             --network=host \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
-            -t http://localhost:3000 \
+            -t http://localhost:8000 \
+            -c zap-config.yaml \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html
 
-      - name: Upload ZAP Scan Reports
+      - name: Upload ZAP Reports
         uses: actions/upload-artifact@v4
         with:
           name: zapscan_${{ github.run_id }}
